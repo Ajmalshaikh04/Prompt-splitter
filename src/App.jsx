@@ -72,7 +72,7 @@ function App() {
 
   return (
     <div className="flex h-screen sm:flex-col lg:flex-row bg-purple-50">
-      <div className="w-1/2 px-10 pt-8 m-6 bg-white rounded-3xl">
+      <div className="w-1/2 px-10 pt-8 m-6 bg-white sm:w-full rounded-3xl">
         <h1 className="mb-4 text-2xl font-bold text-purple-800 underline underline-offset-8">
           PROMPT SPLITTER
         </h1>
@@ -111,7 +111,7 @@ function App() {
           </button>
         </div>
       </div>
-      <div className="w-1/2 m-3">
+      <div className="w-1/2 m-3 sm:w-full">
         {showParts && (
           <div className="mt-6">
             <h2 className="mb-2 text-2xl font-semibold text-purple-800">

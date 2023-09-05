@@ -71,7 +71,7 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-purple-50">
+    <div className="flex h-screen sm:flex-col lg:flex-row bg-purple-50">
       <div className="w-1/2 px-10 pt-8 m-6 bg-white rounded-3xl">
         <h1 className="mb-4 text-2xl font-bold text-purple-800 underline underline-offset-8">
           PROMPT SPLITTER

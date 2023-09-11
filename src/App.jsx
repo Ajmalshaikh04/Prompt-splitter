@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 
 // Function to copy content to clipboard
 const copyToClipboard = (text) => {
@@ -7,6 +8,7 @@ const copyToClipboard = (text) => {
   document.body.appendChild(textArea);
   textArea.select();
   document.execCommand("copy");
+  toast.success("Copied Successfully");
   document.body.removeChild(textArea);
 };
 
@@ -30,44 +32,99 @@ function App() {
     setParts(updatedParts);
   };
 
+  // const splitParagraph = () => {
+  //   const paragraphLength = inputText.split(" ");
+  //   const numParts = Math.ceil(paragraphLength.length / wordLengthPart);
+  //   const partsArray = [];
+
+  //   for (let i = 0; i < numParts; i++) {
+  //     const start = i * wordLengthPart;
+  //     const end = (i + 1) * wordLengthPart;
+  //     const chunkWords = paragraphLength.slice(start, end);
+
+  //     let content = {
+  //       text: "",
+  //       hidden: true,
+  //     };
+
+  //     if (i === numParts - 1) {
+  //       content.text = `[START PART ${i + 1}/${numParts}]\n${chunkWords.join(
+  //         " "
+  //       )}\n[END PART ${
+  //         i + 1
+  //       }/${numParts}]\nALL PARTS SENT. Now you can continue processing the request.`;
+  //     } else {
+  //       content.text = `Do not answer yet. This is just another part of the text I want to send you. Just receive and acknowledge as "Part ${
+  //         i + 1
+  //       }/${numParts} received" and wait for the next part.`;
+  //       content.text += `\n[START PART ${i + 1}/${numParts}]\n${chunkWords.join(
+  //         " "
+  //       )}\n[END PART ${i + 1}/${numParts}]`;
+  //       content.text += `\nRemember not answering yet. Just acknowledge you received this part with the message "Part ${
+  //         i + 1
+  //       }/${numParts} received" and wait for the next part.`;
+  //     }
+
+  //     partsArray.push(content);
+  //   }
+
+  //   setParts(partsArray);
+  //   setShowParts(true);
+  // };
+
+  //
+
   const splitParagraph = () => {
-    const paragraphLength = inputText.split(" ");
-    const numParts = Math.ceil(paragraphLength.length / wordLengthPart);
-    const partsArray = [];
-
-    for (let i = 0; i < numParts; i++) {
-      const start = i * wordLengthPart;
-      const end = (i + 1) * wordLengthPart;
-      const chunkWords = paragraphLength.slice(start, end);
-
-      let content = {
-        text: "",
-        hidden: true,
-      };
-
-      if (i === numParts - 1) {
-        content.text = `[START PART ${i + 1}/${numParts}]\n${chunkWords.join(
-          " "
-        )}\n[END PART ${
-          i + 1
-        }/${numParts}]\nALL PARTS SENT. Now you can continue processing the request.`;
-      } else {
-        content.text = `Do not answer yet. This is just another part of the text I want to send you. Just receive and acknowledge as "Part ${
-          i + 1
-        }/${numParts} received" and wait for the next part.`;
-        content.text += `\n[START PART ${i + 1}/${numParts}]\n${chunkWords.join(
-          " "
-        )}\n[END PART ${i + 1}/${numParts}]`;
-        content.text += `\nRemember not answering yet. Just acknowledge you received this part with the message "Part ${
-          i + 1
-        }/${numParts} received" and wait for the next part.`;
+    try {
+      if (!inputText.trim()) {
+        toast.error("Please enter text to split.");
+        return;
       }
 
-      partsArray.push(content);
-    }
+      const paragraphLength = inputText.split(" ");
+      const numParts = Math.ceil(paragraphLength.length / wordLengthPart);
+      const partsArray = [];
 
-    setParts(partsArray);
-    setShowParts(true);
+      for (let i = 0; i < numParts; i++) {
+        const start = i * wordLengthPart;
+        const end = (i + 1) * wordLengthPart;
+        const chunkWords = paragraphLength.slice(start, end);
+
+        let content = {
+          text: "",
+          hidden: true,
+        };
+
+        if (i === numParts - 1) {
+          content.text = `[START PART ${i + 1}/${numParts}]\n${chunkWords.join(
+            " "
+          )}\n[END PART ${
+            i + 1
+          }/${numParts}]\nALL PARTS SENT. Now you can continue processing the request.`;
+        } else {
+          content.text = `Do not answer yet. This is just another part of the text I want to send you. Just receive and acknowledge as "Part ${
+            i + 1
+          }/${numParts} received" and wait for the next part.`;
+          content.text += `\n[START PART ${
+            i + 1
+          }/${numParts}]\n${chunkWords.join(" ")}\n[END PART ${
+            i + 1
+          }/${numParts}]`;
+          content.text += `\nRemember not answering yet. Just acknowledge you received this part with the message "Part ${
+            i + 1
+          }/${numParts} received" and wait for the next part.`;
+        }
+
+        partsArray.push(content);
+      }
+
+      setParts(partsArray);
+      setShowParts(true);
+      toast.success("Prompt split successfully!");
+    } catch (error) {
+      console.error("Error splitting prompt:", error);
+      toast.error("An error occurred while splitting the prompt.");
+    }
   };
 
   return (

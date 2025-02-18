@@ -20,15 +20,15 @@ function App() {
   const [clickedIndex, setClickedIndex] = useState([]);
   const [cliCommand1, setCliCommand1] = useState(`
 Get-ChildItem -Recurse -Exclude 'package-lock.json', 'output.txt','package.json','.env','.gitignore','README.md' | Where-Object { 
-     $_.FullName -notlike '*\coverage\*' -and 
-     $_.FullName -notlike '*\node_modules\*' -and 
-     $_.FullName -notlike '*\seed\*' -and
+     $_.FullName -notlike '*\\\\coverage\\\\*' -and 
+     $_.FullName -notlike '*\\\\node_modules\\\\*' -and 
+     $_.FullName -notlike '*\\\\seed\\\\*' -and
      -not $_.PSIsContainer 
 } | ForEach-Object {
      "======================================================================="
-     "{0}\`\n\`n{1}\`\n" -f $_.FullName, (Get-Content $_.FullName -Raw)
+     "{0}\\n\\n{1}\\n" -f $_.FullName, (Get-Content $_.FullName -Raw)
  } | Out-File -FilePath 'output.txt' -Encoding utf8
-  `);
+`);
 
   const [cliCommand2, setCliCommand2] = useState(`
 function Get-Tree {

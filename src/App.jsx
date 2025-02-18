@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import toast from "react-hot-toast";
 
 // Function to copy content to clipboard
@@ -18,6 +18,56 @@ function App() {
   const [parts, setParts] = useState([]);
   const [showParts, setShowParts] = useState(false);
   const [clickedIndex, setClickedIndex] = useState([]);
+  const [cliCommand1, setCliCommand1] = useState(`
+Get-ChildItem -Recurse -Exclude 'package-lock.json', 'output.txt','package.json','.env','.gitignore','README.md' | Where-Object { 
+     $_.FullName -notlike '*\coverage\*' -and 
+     $_.FullName -notlike '*\node_modules\*' -and 
+     $_.FullName -notlike '*\seed\*' -and
+     -not $_.PSIsContainer 
+} | ForEach-Object {
+     "======================================================================="
+     "{0}\`\n\`n{1}\`\n" -f $_.FullName, (Get-Content $_.FullName -Raw)
+ } | Out-File -FilePath 'output.txt' -Encoding utf8
+  `);
+
+  const [cliCommand2, setCliCommand2] = useState(`
+function Get-Tree {
+    param (
+        [string]$Path = $null,
+        [int]$IndentLevel = 0
+    )
+
+    if (-not $Path) {
+        $Path = Read-Host "Enter the path (press Enter for the current directory):"
+        if (-not $Path) {
+            $Path = (Get-Location).Path
+        }
+    }
+
+    $indentation = "│   " * $IndentLevel
+    $currentDirectory = Get-Item $Path
+
+    # Exclude node_modules and build directories
+    $excludedDirectories = @("node_modules", "build","images","fonts","logo","favicon","illustrations","icons","background")
+    if ($currentDirectory.Name -notin $excludedDirectories) {
+        Write-Output "$indentation├── $($currentDirectory.Name)/ [Folder]"
+
+        $subDirectories = Get-ChildItem -Path $Path -Directory
+        $subFiles = Get-ChildItem -Path $Path -File
+
+        foreach ($subDirectory in $subDirectories) {
+            Get-Tree -Path $subDirectory.FullName -IndentLevel ($IndentLevel + 1)
+        }
+
+        foreach ($subFile in $subFiles) {
+            Write-Output "$indentation│   └── $($subFile.Name)"
+        }
+    }
+}
+
+# Run the script
+Get-Tree
+  `);
 
   const handleElementClick = (index) => {
     const updatedClickedButtons = [...clickedIndex];
@@ -177,6 +227,33 @@ function App() {
             ))}
           </div>
         )}
+        <div className="mt-4">
+          <h2 className="mb-2 text-xl font-semibold text-purple-800 lg:text-2xl">CLI Commands</h2>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-purple-800">Get Content to File:</h3>
+            <pre className="p-2 bg-gray-100 rounded-lg overflow-auto">
+              <code>{cliCommand1}</code>
+            </pre>
+            <button 
+              onClick={() => copyToClipboard(cliCommand1)}
+              className="px-4 py-2 mt-2 text-white bg-purple-600 rounded-md hover:bg-purple-500"
+            >
+              Copy Command 1
+            </button>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-purple-800">Get File Tree:</h3>
+            <pre className="p-2 bg-gray-100 rounded-lg overflow-auto">
+              <code>{cliCommand2}</code>
+            </pre>
+            <button 
+              onClick={() => copyToClipboard(cliCommand2)}
+              className="px-4 py-2 mt-2 text-white bg-purple-600 rounded-md hover:bg-purple-500"
+            >
+              Copy Command 2
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

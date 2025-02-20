@@ -621,15 +621,24 @@ function App() {
   const [parts, setParts] = useState([]);
   const [showParts, setShowParts] = useState(false);
   const [clickedIndex, setClickedIndex] = useState([]);
-  const [cliCommand1, setCliCommand1] = useState(`Get-ChildItem -Recurse -Exclude 'package-lock.json', 'output.txt','package.json','.env','.gitignore','README.md' | Where-Object { 
-     $_.FullName -notlike '*\\coverage\\*' -and 
-     $_.FullName -notlike '*\\node_modules\\*' -and 
-     $_.FullName -notlike '*\\seed\\*' -and
-     -not $_.PSIsContainer 
-} | ForEach-Object {
-     "======================================================================="
-     "{0}\`n\`n{1}\`n" -f $_.FullName, (Get-Content $_.FullName -Raw)
- } | Out-File -FilePath 'output.txt' -Encoding utf8`);
+  const [cliCommand1, setCliCommand1] = useState(`Get-ChildItem -Recurse -Exclude 'package-lock.json', 'output.txt', 'package.json', '.env', '.gitignore', 'README.md' | 
+    Where-Object { 
+        $_.FullName -notlike '*\\coverage\\*' -and 
+        $_.FullName -notlike '*\\ui\\*' -and 
+        $_.FullName -notlike '*\\node_modules\\*' -and 
+        $_.FullName -notlike '*\\seed\\*' -and
+        $_.Extension -notin '.png', '.svg', '.jpg', '.jpeg' -and
+        $_.FullName -notlike '*\\tests\\*' -and
+        $_.FullName -notlike '*\\__tests__\\*' -and
+        $_.FullName -notlike '*\\.test.*' -and
+        $_.FullName -notlike '*\\.spec.*' -and
+        -not $_.PSIsContainer 
+    } | 
+    ForEach-Object {
+        "======================================================================="
+        "{0}\`n\`n{1}\`n" -f $_.FullName, (Get-Content $_.FullName -Raw)
+    } | 
+    Out-File -FilePath 'output.txt' -Encoding utf8`);
 
   const [cliCommand2, setCliCommand2] = useState(`
 function Get-Tree {

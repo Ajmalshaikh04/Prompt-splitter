@@ -259,7 +259,7 @@
 // }
 
 // export default App;
-//=============================================================================
+// =============================================================================
 // import { useState } from "react";
 // import toast, { Toaster } from "react-hot-toast";
 
@@ -605,7 +605,7 @@
 // export default App;
 
 //=============================================================UP WORKING CODE======================
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import toast, { Toaster } from "react-hot-toast";
 
 // Function to copy content to clipboard
@@ -621,24 +621,15 @@ function App() {
   const [parts, setParts] = useState([]);
   const [showParts, setShowParts] = useState(false);
   const [clickedIndex, setClickedIndex] = useState([]);
-  const [cliCommand1, setCliCommand1] = useState(`Get-ChildItem -Recurse -Exclude 'package-lock.json', 'output.txt', 'package.json', '.env', '.gitignore', 'README.md' | 
-Where-Object { 
-    $_.FullName -notlike '*\\coverage\\*' -and 
-    $_.FullName -notlike '*\\ui\\*' -and 
-    $_.FullName -notlike '*\\node_modules\\*' -and 
-    $_.FullName -notlike '*\\seed\\*' -and
-    $_.Extension -notin '.png', '.svg', '.jpg', '.jpeg' -and
-    $_.FullName -notlike '*\\tests\\*' -and
-    $_.FullName -notlike '*\\__tests__\\*' -and
-    $_.FullName -notlike '*\\.test.*' -and
-    $_.FullName -notlike '*\\.spec.*' -and
-    -not $_.PSIsContainer 
-} | 
-ForEach-Object {
-    "======================================================================="
-    "{0}\`n\`n{1}\`n" -f $_.FullName, (Get-Content $_.FullName -Raw)
-} | 
-Out-File -FilePath 'output.txt' -Encoding utf8`);
+  const [cliCommand1, setCliCommand1] = useState(`Get-ChildItem -Recurse -Exclude 'package-lock.json', 'output.txt','package.json','.env','.gitignore','README.md' | Where-Object { 
+     $_.FullName -notlike '*\\coverage\\*' -and 
+     $_.FullName -notlike '*\\node_modules\\*' -and 
+     $_.FullName -notlike '*\\seed\\*' -and
+     -not $_.PSIsContainer 
+} | ForEach-Object {
+     "======================================================================="
+     "{0}\`n\`n{1}\`n" -f $_.FullName, (Get-Content $_.FullName -Raw)
+ } | Out-File -FilePath 'output.txt' -Encoding utf8`);
 
   const [cliCommand2, setCliCommand2] = useState(`
 function Get-Tree {
@@ -678,29 +669,35 @@ function Get-Tree {
 # Run the script
 Get-Tree
   `);
+  const [directoryTree, setDirectoryTree] = useState([]);
+  const [treeText, setTreeText] = useState("");
 
-  // Rest of the component remains unchanged
-  const handleElementClick = (index) => {
-    const updatedClickedButtons = [...clickedIndex];
-    updatedClickedButtons[index] = !updatedClickedButtons[index];
-    setClickedIndex(updatedClickedButtons);
-  };
+  // Memoized handlers for better performance
+  const handleElementClick = useCallback((index) => {
+    setClickedIndex((prev) => {
+      const updated = [...prev];
+      updated[index] = !updated[index];
+      return updated;
+    });
+  }, []);
 
-  const handleInputChange = (event) => {
+  const handleInputChange = useCallback((event) => {
     setInputText(event.target.value);
-  };
+  }, []);
 
-  const handleWordLengthChange = (event) => {
-    setWordLengthPart(parseInt(event.target.value, 10));
-  };
+  const handleWordLengthChange = useCallback((event) => {
+    setWordLengthPart(parseInt(event.target.value, 10) || 2000);
+  }, []);
 
-  const toggleChunk = (index) => {
-    const updatedParts = [...parts];
-    updatedParts[index].hidden = !updatedParts[index].hidden;
-    setParts(updatedParts);
-  };
+  const toggleChunk = useCallback((index) => {
+    setParts((prev) => {
+      const updated = [...prev];
+      updated[index].hidden = !updated[index].hidden;
+      return updated;
+    });
+  }, []);
 
-  const splitParagraph = () => {
+  const splitParagraph = useCallback(() => {
     try {
       if (!inputText.trim()) {
         toast.error("Please enter text to split.");
@@ -751,6 +748,96 @@ Get-Tree
       console.error("Error splitting prompt:", error);
       toast.error("An error occurred while splitting the prompt.");
     }
+  }, [inputText, wordLengthPart]);
+
+  const loadDirectoryTree = useCallback(async () => {
+    try {
+      if (!("showDirectoryPicker" in window)) {
+        throw new Error("File System Access API not supported in this browser");
+      }
+
+      const dirHandle = await window.showDirectoryPicker();
+      const tree = await buildTree(dirHandle);
+      setDirectoryTree([tree]);
+      const treeText = renderTreeAsText(tree);
+      setTreeText(treeText);
+    } catch (error) {
+      const message = error.name === "AbortError"
+        ? "Directory selection was cancelled"
+        : `Error accessing directory: ${error.message}`;
+      toast.error(message);
+    }
+  }, []);
+
+  const buildTree = async (dirHandle, depth = 0) => {
+    const node = {
+      name: dirHandle.name,
+      isDirectory: true,
+      children: [],
+    };
+
+    const excludedDirs = [
+      ".git", "node_modules", "coverage", "tests", "__tests__",
+      "ui", "seed", "build", "dist",
+    ];
+    const excludedFiles = [
+      "package-lock.json", "output.txt", "package.json", ".env",
+      ".gitignore", "README.md",
+    ];
+    const excludedExt = [
+      ".png", ".svg", ".jpg", ".jpeg", ".test.js", ".spec.js",
+      ".idx", ".pack", ".rev",
+    ];
+
+    if (depth > 0 && excludedDirs.includes(dirHandle.name.toLowerCase())) {
+      return null;
+    }
+
+    for await (const entry of dirHandle.values()) {
+      const entryName = entry.name.toLowerCase();
+
+      if (entry.kind === "directory") {
+        if (!excludedDirs.includes(entryName)) {
+          const childTree = await buildTree(entry, depth + 1);
+          if (childTree) node.children.push(childTree);
+        }
+      } else {
+        if (
+          !excludedFiles.includes(entryName) &&
+          !excludedExt.some((ext) => entryName.endsWith(ext)) &&
+          !entryName.includes(".test.") &&
+          !entryName.includes(".spec.")
+        ) {
+          node.children.push({
+            name: entry.name,
+            isDirectory: false,
+          });
+        }
+      }
+    }
+
+    if (depth === 0 || node.children.length > 0) {
+      return node;
+    }
+    return null;
+  };
+
+  const renderTreeAsText = (node, depth = 0) => {
+    let output = "";
+    const indent = "│   ".repeat(depth); // Use '│   ' for vertical lines
+    const isLast = !node.children || node.children.length === 0;
+    const connector = isLast ? "└── " : "├── "; // Use '└──' for last item, '├──' for others
+
+    // Use a bullet (●) instead of black square or no icon
+    output += `${indent}${connector}● ${node.name}\n`;
+
+    if (node.children) {
+      node.children.forEach((child, index) => {
+        const childIsLast = index === node.children.length - 1;
+        output += renderTreeAsText(child, depth + (childIsLast ? 0 : 1));
+      });
+    }
+    return output;
   };
 
   return (
@@ -759,9 +846,9 @@ Get-Tree
         position="top-center"
         toastOptions={{
           style: {
-            borderRadius: '10px',
-            background: '#333',
-            color: '#fff',
+            borderRadius: "10px",
+            background: "#333",
+            color: "#fff",
           },
         }}
       />
@@ -892,7 +979,7 @@ Get-Tree
               </div>
             )}
             
-            <div className="bg-white rounded-2xl shadow-xl p-6 backdrop-filter backdrop-blur-sm bg-opacity-80">
+            <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 backdrop-filter backdrop-blur-sm bg-opacity-80">
               <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -947,6 +1034,37 @@ Get-Tree
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Directory Tree Section */}
+            <div className="bg-white rounded-2xl shadow-xl p-6 backdrop-filter backdrop-blur-sm bg-opacity-80">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m-12 1v10a2 2 0 002 2h6a2 2 0 002-2V10" />
+                </svg>
+                Directory Tree
+              </h2>
+              <div className="flex gap-2 mb-4">
+                <button
+                  className="py-2 px-4 text-white bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition duration-200"
+                  onClick={loadDirectoryTree}
+                >
+                  Select Directory
+                </button>
+                {treeText && (
+                  <button
+                    className="py-2 px-4 text-white bg-gradient-to-r from-green-600 to-teal-600 rounded-lg hover:from-green-700 hover:to-teal-700 transition duration-200"
+                    onClick={() => copyToClipboard(treeText)}
+                  >
+                    Copy Tree
+                  </button>
+                )}
+              </div>
+              {directoryTree.length > 0 && (
+                <pre className="max-h-96 overflow-y-auto bg-[#1e1e1e] p-4 rounded-lg border border-gray-700 font-mono text-sm text-white whitespace-pre-wrap">
+                  {directoryTree.map((node, index) => renderTreeAsText(node)).join('')}
+                </pre>
+              )}
             </div>
           </div>
         </div>
